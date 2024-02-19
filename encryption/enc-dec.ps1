@@ -13,7 +13,7 @@ function xorEncDec ($cleartext, $password) {
 
 
 function GenerateSession() {
-    $session = -join()
+    $session = -join((65..90) + (97..122) | Get-Random -Count 6 | %{[char]$_})
  
     return $session
  }
