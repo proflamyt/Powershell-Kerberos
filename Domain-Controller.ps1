@@ -1,28 +1,23 @@
 #  Domain  Controller 
 Import-Module .\encryption\enc-dec.ps1
 
+$port = 12345
 
-$Listener = [System.Net.Sockets.TcpListener] 1234;
+$chost = "127.0.0.1"
 
-$Listener.Start()
+$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse($chost), $port)
+$listener.Start()
 
-while ($true) {
-    $client = $Listener.AcceptTcpClient()
-    $client.Close()
-    
-}
 $creds = @{"ola.lap1" = "password1"; "adedayo.lap2" = "password2";
              "krbgtb" = "long-pass"; "sql.service"="iloveyou" }
 
 $dc_pass = $users["krbgtb"]
 
 
-function UserAuthentication($user) {
+function UserAuthentication($userObject) {
     # Base64 decryption
 
-    $userobject = ConvertFrom-Json $user
-
-    $timestamp = xorEncDec($userobject.Data , $creds[$userobject.Name])   
+    $timestamp = xorEncDec $userObject.Data  $creds[$userObject.Name]  
 
     #if timestamp
 
@@ -33,7 +28,7 @@ function UserAuthentication($user) {
 
     $UserTGT = xorEncDec($session, $dc_pass)
 
-    $SessionKey = xorEncDec($session, $creds[$userobject.Name])
+    $SessionKey = xorEncDec($session, $creds[$userObject.Name])
 
 
     return $UserTGT, $SessionKey
@@ -61,4 +56,36 @@ function ServiceAuthentication($userTGT, $encrypteddata){
 }
 
 
+function  sendMessage ($message){
 
+    $message | ConvertTo-Json
+
+}
+
+
+function  receiveMessage ($message){
+
+    $message | ConvertFrom-Json
+}
+
+Write-Host "Waiting for connection on port $port..."
+while ($true) {
+
+    $client = $listener.AcceptTcpClient()
+    $stream = $client.GetStream()
+
+    $reader = [System.IO.StreamReader]::new($stream)
+
+    $message = receiveMessage $reader.ReadLine()
+
+    if ($message.type -eq "userauth") {
+        UserAuthentication $message
+    }
+    else {
+        ServiceAuthentication $message
+    }
+
+    $client.Close()
+}
+
+$listener.Stop()
