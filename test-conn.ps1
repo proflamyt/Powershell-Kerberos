@@ -12,7 +12,7 @@ while ($true) {
     $stream = $client.GetStream()
 
     # Create a StreamReader to read messages from the stream
-    $reader = [System.IO.StreamReader]::new($stream)
+    $reader = [System.IO.StreamWriter]::new($stream)
 
     # Read the message from the stream
     $message = $reader.ReadLine()
