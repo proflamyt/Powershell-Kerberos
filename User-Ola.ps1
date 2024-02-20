@@ -30,9 +30,13 @@ while ($true) {
         $authenticated = $true
     }
 
-    $message  =  $reader.ReadLine()
-    
+    $message  =  $reader.ReadLine() | ConvertFrom-Json
 
+    if ($message.Type -eq "tgt") {
+
+    }
+
+    
 
 
     $client.Close()
