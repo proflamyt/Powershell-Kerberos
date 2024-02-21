@@ -32,6 +32,7 @@ while ($true) {
     }
     else {
         $result = ServiceAuthentication $message
+        
         sendMessage $writer $result
     }
 

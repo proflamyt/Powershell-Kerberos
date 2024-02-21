@@ -33,7 +33,16 @@ while ($true) {
     $message  =  $reader.ReadLine() | ConvertFrom-Json
 
     if ($message.Type -eq "tgt") {
+        $data =  @{
+            "message" = "give me money, money"
+        }
+        $encryptedData = ServiceRequest $message.SessionKey $data
 
+        return $message.userTGT, $encryptedData
+    }
+
+    elseif ($message.Type -eq "svt") {
+        <# Action when this condition is true #>
     }
 
     
@@ -60,5 +69,32 @@ function Authenticate {
     $userRequestObject = $userRequest | ConvertTo-Json
 
     return $userRequestObject
+
+}
+
+
+function ServiceRequest($EncSession, $data) {
+    
+    $sessionKey = xorEncDec $EncSession $creds['ola.lap1']
+
+    $encryptedData = $data | ConvertTo-Json
+
+    $encrypted = xorEncDec $encryptedData $creds['ola.lap1']
+
+    return $encrypted
+
+}
+
+
+$tcpClient = New-Object System.Net.Sockets.TCPClient
+$tcpClient.Connect("127.0.0.1",7)
+
+function serverRequest($data , $sessionKey) {
+
+    $sessionToken = xorEncDec $sessionKey $creds['ola.lap1']
+
+    $encryptedData = xorEncDec $data $sessionToken
+
+    return $encryptedData
 
 }
