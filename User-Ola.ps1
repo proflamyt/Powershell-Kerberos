@@ -6,8 +6,11 @@ $port = 50551
 
 $chost = "127.0.0.1"
 
-$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse($chost), $port)
-$listener.Start()
+$tcpConnection = New-Object System.Net.Sockets.TcpClient($chost, $port)
+$tcpStream = $tcpConnection.GetStream()
+$reader = New-Object System.IO.StreamReader($tcpStream)
+$writer = New-Object System.IO.StreamWriter($tcpStream)
+$writer.AutoFlush = $true
 
 $creds = @{"ola.lap1" = "password1"}
 
@@ -15,13 +18,7 @@ $authenticated = $false
 
 
 Write-Host "Waiting for connection on port $port..."
-while ($true) {
-
-    $client = $listener.AcceptTcpClient()
-    $stream = $client.GetStream()
-
-    $reader = [System.IO.StreamReader]::new($stream)
-    $writer = [System.IO.StreamReader]::new($stream)
+while ($tcpConnection.Connected) {
 
     if ($authenticated -eq $false) {
         $message = Authenticate
@@ -30,28 +27,24 @@ while ($true) {
         $authenticated = $true
     }
 
-    $message  =  $reader.ReadLine() | ConvertFrom-Json
+    $message  =  receiveMessage $reader
 
-    if ($message.Type -eq "tgt") {
+    if ($message["Type"] -eq "tgt") {
         $data =  @{
             "message" = "give me money, money"
         }
-        $encryptedData = ServiceRequest $message.SessionKey $data
+        $encryptedData = ServiceRequest $message.data $data
 
         return $message.userTGT, $encryptedData
     }
 
-    elseif ($message.Type -eq "svt") {
+    elseif ($message["Type"] -eq "svt") {
         <# Action when this condition is true #>
+        serverRequest
     }
 
-    
-
-
-    $client.Close()
 }
 
-$listener.Stop()
 
 
 
@@ -86,8 +79,8 @@ function ServiceRequest($EncSession, $data) {
 }
 
 
-$tcpClient = New-Object System.Net.Sockets.TCPClient
-$tcpClient.Connect("127.0.0.1",7)
+# $tcpClient = New-Object System.Net.Sockets.TCPClient
+# $tcpClient.Connect("127.0.0.1",7)
 
 function serverRequest($data , $sessionKey) {
 

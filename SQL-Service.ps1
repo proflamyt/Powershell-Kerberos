@@ -26,7 +26,7 @@ while ($true) {
     $reader = [System.IO.StreamReader]::new($stream)
     $writer = [System.IO.StreamReader]::new($stream)
 
-    $message = receiveMessage $reader.ReadLine()
+    $message = receiveMessage $reader
 
 
 

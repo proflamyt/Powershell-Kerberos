@@ -24,16 +24,15 @@ while ($true) {
     $reader = [System.IO.StreamReader]::new($stream)
     $writer = [System.IO.StreamReader]::new($stream)
 
-    $message = receiveMessage $reader.ReadLine()
+    $message = receiveMessage $reader
 
-    if ($message.Type -eq "userauth") {
+    if ($message["Type"] -eq "userauth") {
         $result = UserAuthentication $message
-        sendMessage $writer $result
+        sendMessage $writer "tgt" $result
     }
     else {
         $result = ServiceAuthentication $message
-        
-        sendMessage $writer $result
+        sendMessage $writer "svt" $result
     }
 
     $client.Close()
@@ -48,7 +47,7 @@ $listener.Stop()
 function UserAuthentication($userObject) {
     # Base64 decryption
 
-    $timestamp = xorEncDec $userObject.Data  $creds[$userObject.Name]  
+    $timestamp = xorEncDec $userObject["data"]  $creds[$userObject.Name]  
 
     #if timestamp
 
@@ -90,18 +89,7 @@ function ServiceAuthentication($userTGT, $encrypteddata){
 }
 
 
-function sendMessage ($writer,  $message){
 
-    $message = $message | ConvertTo-Json
-    $writer.WriteLine($message)
-    $writer.Flush()
-
-}
-
-function  receiveMessage ($message){
-
-    $message | ConvertFrom-Json
-}
 
 
 

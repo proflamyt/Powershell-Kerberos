@@ -21,15 +21,19 @@ function GenerateSession() {
 
 
 
- function sendMessage ($writer,  $message){
-
+ function sendMessage ($writer, $type, $message){
+    $message =  @{
+        "Type"= $type
+        "data" = $message
+    }
     $message = $message | ConvertTo-Json
     $writer.WriteLine($message)
     $writer.Flush()
 
 }
 
-function  receiveMessage ($message){
 
+function  receiveMessage ($reader){
+    $message = $reader.ReadLine()
     $message | ConvertFrom-Json
 }
