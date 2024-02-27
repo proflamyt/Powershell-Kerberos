@@ -1,8 +1,8 @@
 # User 
 
-Import-Module .\encryption\enc-dec.ps1
+Import-Module .\encryption\enc-dec.ps1 -Force
 
-$port = 50551
+$port = 12345
 
 $chost = "127.0.0.1"
 
@@ -17,19 +17,43 @@ $creds = @{"ola.lap1" = "password1"}
 $authenticated = $false
 
 
-Write-Host "Waiting for connection on port $port..."
+
+
+
+function Authenticate {
+    $date = (get-date).Ticks;
+    $encryptedData =  xorEncDec "$date" $creds['ola.lap1']
+
+    $userRequest = @{
+        Name = "ola.lap1"
+        Data = $encryptedData
+    }
+    
+    $userRequestObject = $userRequest | ConvertTo-Json
+
+    return $userRequestObject
+
+}
+
+
 while ($tcpConnection.Connected) {
 
+    # send first request
+    
     if ($authenticated -eq $false) {
-        $message = Authenticate
-        $writer.WriteLine($message)
-        $writer.Flush()
+        Write-Host "Sending First Authentication Request"
+        $message = Authenticate; 
+        sendMessage $writer "userauth" $message
+        Write-Host "Sent"
         $authenticated = $true
     }
+    # Receive response
 
-    $message  =  receiveMessage $reader
+    $message = receiveMessage $reader
 
-    if ($message["Type"] -eq "tgt") {
+    Write-Host "This is " + $message
+
+    if ($message.Type -eq "tgt") {
         $data =  @{
             "message" = "give me money, money"
         }
@@ -38,30 +62,10 @@ while ($tcpConnection.Connected) {
         return $message.userTGT, $encryptedData
     }
 
-    elseif ($message["Type"] -eq "svt") {
+    elseif ($message.Type -eq "svt") {
         <# Action when this condition is true #>
         serverRequest
     }
-
-}
-
-
-
-
-function Authenticate {
-    $date = (get-date).Ticks;
-    $encryptedData =  xorEncDec $date $creds['ola.lap1']
-
-
-    $userRequest = @{
-        Name = "ola.lap1"
-        Type = "userauth"
-        Data = $encryptedData
-    }
-    
-    $userRequestObject = $userRequest | ConvertTo-Json
-
-    return $userRequestObject
 
 }
 

@@ -1,5 +1,5 @@
 #  Domain  Controller 
-Import-Module .\encryption\enc-dec.ps1
+Import-Module .\encryption\enc-dec.ps1 -Force
 
 $port = 12345
 
@@ -11,27 +11,32 @@ $listener.Start()
 $creds = @{"ola.lap1" = "password1"; "adedayo.lap2" = "password2";
              "krbgtb" = "long-pass"; "sql.service"="iloveyou" }
 
-$dc_pass = $users["krbgtb"]
+$dc_pass = $creds["krbgtb"]
 
-
+$i = 0
 
 Write-Host "Waiting for connection on port $port..."
-while ($true) {
+
+while ( $i -lt 3) {
+    $i ++;
 
     $client = $listener.AcceptTcpClient()
     $stream = $client.GetStream()
 
     $reader = [System.IO.StreamReader]::new($stream)
-    $writer = [System.IO.StreamReader]::new($stream)
+    $writer = [System.IO.StreamWriter]::new($stream)
 
     $message = receiveMessage $reader
 
-    if ($message["Type"] -eq "userauth") {
+    Write-Host $message
+    Write-Host "Received"
+    
+    if ($message.Type -eq "userauth") {
         $result = UserAuthentication $message
         sendMessage $writer "tgt" $result
     }
-    else {
-        $result = ServiceAuthentication $message
+    Else {
+        $result = ServiceAuthentication $message.data[0] $message.data[1] 
         sendMessage $writer "svt" $result
     }
 
@@ -65,10 +70,10 @@ function UserAuthentication($userObject) {
 
 
     return $UserTGT, $SessionKey
-}
+};
 
 
-function ServiceAuthentication($userTGT, $encrypteddata){
+function ServiceAuthentication($userTGT, $encrypteddata) {
 
     $session = xorEncDec $userTGT $dc_pass
 
