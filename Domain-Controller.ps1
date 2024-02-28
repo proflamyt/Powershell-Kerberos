@@ -13,63 +13,37 @@ $creds = @{"ola.lap1" = "password1"; "adedayo.lap2" = "password2";
 
 $dc_pass = $creds["krbgtb"]
 
-$i = 0
-
-Write-Host "Waiting for connection on port $port..."
-
-while ( $i -lt 3) {
-    $i ++;
-
-    $client = $listener.AcceptTcpClient()
-    $stream = $client.GetStream()
-
-    $reader = [System.IO.StreamReader]::new($stream)
-    $writer = [System.IO.StreamWriter]::new($stream)
-
-    $message = receiveMessage $reader
-
-    Write-Host $message
-    Write-Host "Received"
-    
-    if ($message.Type -eq "userauth") {
-        $result = UserAuthentication $message
-        sendMessage $writer "tgt" $result
-    }
-    Else {
-        $result = ServiceAuthentication $message.data[0] $message.data[1] 
-        sendMessage $writer "svt" $result
-    }
-
-    $client.Close()
-}
-
-$listener.Stop()
-
-
-
-
 
 function UserAuthentication($userObject) {
     # Base64 decryption
+    $userObject = $userObject | ConvertFrom-Json
 
-    $timestamp = xorEncDec $userObject["data"]  $creds[$userObject.Name]  
+    $timestamp = xorEncDec $userObject.Data  $creds[$userObject.Name]  
 
-    #if timestamp
+    $ola =  [bigint]-join($timestamp | %{[char]$_})
 
-    if ((get-date).Ticks - $timestamp -gt 1000) {
-        return "Error"
-    }
 
+
+    # if ((get-date).Ticks - $ola -gt 1000) {
+    #     return "Error"
+    # }
+
+    
     $session = GenerateSession;
 
     # encrypt session with user pass and encrypt tct with krbgtg pass
 
     $UserTGT = xorEncDec $session $dc_pass
+    
 
-    $SessionKey = xorEncDec $session, $creds[$userObject.Name]
+    $SessionKey = xorEncDec $session $creds[$userObject.Name]
+    
 
-
-    return $UserTGT, $SessionKey
+    $send =  @{
+    "usertgt" = $UserTGT
+    "sessionkey" = $SessionKey
+}
+    return $send
 };
 
 
@@ -92,6 +66,45 @@ function ServiceAuthentication($userTGT, $encrypteddata) {
 
     return $SQLTicket, $SessionKey
 }
+
+
+
+
+$i = 0
+
+Write-Host "Waiting for connection on port $port..."
+
+while ( $i -lt 3) {
+    $i ++;
+
+    $client = $listener.AcceptTcpClient()
+    $stream = $client.GetStream()
+
+    $reader = [System.IO.StreamReader]::new($stream)
+    $writer = [System.IO.StreamWriter]::new($stream)
+
+    $message = receiveMessage $reader
+
+    Write-Host $message
+    Write-Host "Received"
+    
+    IF ($message.Type -eq "userauth") {
+        $result = UserAuthentication $message.data
+        sendMessage $writer "tgt" $result
+        $writer.close()
+    }
+    Else {
+        $result = ServiceAuthentication $message.data[0] $message.data[1] 
+        sendMessage $writer "svt" $result
+    }
+
+    $client.Close()
+}
+
+$listener.Stop()
+
+
+
 
 
 

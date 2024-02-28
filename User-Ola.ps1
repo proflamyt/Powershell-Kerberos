@@ -48,7 +48,6 @@ while ($tcpConnection.Connected) {
         $authenticated = $true
     }
     # Receive response
-
     $message = receiveMessage $reader
 
     Write-Host "This is " + $message

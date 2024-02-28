@@ -1,7 +1,9 @@
 
 ## 
 function xorEncDec ($cleartext, $password) {
-    $cleartext = $cleartext.toCharArray()
+    if ($cleartext -is [string]) {
+        $cleartext = $cleartext.toCharArray()
+    }
     $ciphertext = @();
 
     for ($i = 0; $i -lt $cleartext.Count; $i++) {
@@ -14,7 +16,7 @@ function xorEncDec ($cleartext, $password) {
 
 
 function GenerateSession() {
-    $session = -join((65..90) + (97..122) | Get-Random -Count 6 | %{[char]$_})
+    $session = -join((65..90) + (97..122) | Get-Random -Count 20 | %{[char]$_})
  
     return $session
  }
@@ -29,12 +31,10 @@ function GenerateSession() {
     $Jsonmessage = $message | ConvertTo-Json
     $writer.Write($Jsonmessage)
     $writer.Flush()
-    $writer.close()
 }
 
 
 function  receiveMessage ($reader){
     $message = $reader.ReadToEnd()
     $message | ConvertFrom-Json
-    $reader.close()
 }
