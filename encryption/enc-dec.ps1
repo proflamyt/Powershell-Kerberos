@@ -1,5 +1,9 @@
 
 ## 
+$dcPort = 12345
+$dcHost = "127.0.0.1"
+$storage = New-Object byte[] 30333
+
 function xorEncDec ($cleartext, $password) {
     if ($cleartext -is [string]) {
         $cleartext = $cleartext.toCharArray()
@@ -23,18 +27,15 @@ function GenerateSession() {
 
 
 
- function sendMessage ($writer, $type, $message){
+ function sendMessage ($type, $message){
     $message =  @{
         "Type"= $type
         "data" = $message
     }
     $Jsonmessage = $message | ConvertTo-Json
-    $writer.Write($Jsonmessage)
-    $writer.Flush()
 }
 
 
 function  receiveMessage ($reader){
-    $message = $reader.ReadToEnd()
     $message | ConvertFrom-Json
 }

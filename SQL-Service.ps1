@@ -18,13 +18,14 @@ $svc_pass = $users["sql.service"]
 
 
 Write-Host "Waiting for connection on port $port..."
+
 while ($true) {
 
     $client = $listener.AcceptTcpClient()
     $stream = $client.GetStream()
 
     $reader = [System.IO.StreamReader]::new($stream)
-    $writer = [System.IO.StreamReader]::new($stream)
+
 
     $message = receiveMessage $reader
 
@@ -39,7 +40,6 @@ $listener.Stop()
 
 function sendData ($serviceTKT, $EncryptedData) {
     $session = xorEncDec $serviceTKT $svc_pass
-
     $data =  xorEncDec $EncryptedData $session
 
     
