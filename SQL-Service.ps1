@@ -1,8 +1,7 @@
 # SQL Service
 
-
 #  Domain  Controller 
-Import-Module .\encryption\enc-dec.ps1
+Import-Module .\encryption\enc-dec.ps1 -Force
 
 $port = 5005
 
@@ -11,28 +10,31 @@ $chost = "127.0.0.1"
 $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse($chost), $port)
 $listener.Start()
 
-$creds = @{"sql.service"="iloveyou" }
+$creds = @{"sql.service" = "iloveyou" }
 
-$svc_pass = $users["sql.service"]
+$svc_pass = $creds["sql.service"]
 
-
+$client = $listener.AcceptTcpClient()
 
 Write-Host "Waiting for connection on port $port..."
 
-while ($true) {
+if ($client.Connected) {
 
-    $client = $listener.AcceptTcpClient()
     $stream = $client.GetStream()
 
-    $reader = [System.IO.StreamReader]::new($stream)
+    $messageLenght = $stream.Read($storage, 0, $storage.Length)
+    $data = [System.Text.Encoding]::UTF8.GetString($storage)
+    $message = $data.substring(0, $messageLenght) | ConvertFrom-Json
 
+  
+    $ticket = xorEncDec $message.data.serviceTicket $creds['sql.service']
 
-    $message = receiveMessage $reader
+    $decodedMessage = -join (xorEncDec $message.data.message $ticket  | %{[char]$_}) | ConvertFrom-Json
 
-
-
-    $client.Close()
-}
+    if ($decodedMessage.Message = "Give me Money, Money") {
+        Write-Host "You Passed"
+    }
+    }
 
 $listener.Stop()
 

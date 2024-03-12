@@ -47,21 +47,30 @@ function UserAuthentication($userObject) {
     return $send
 };
 
-function ServiceAuthentication($userTGT, $encrypteddata) {
+function ServiceAuthentication($userTGT, $encryptedData) {
 
     $session = xorEncDec $userTGT $dc_pass
 
-    $data = xorEncDec $encrypteddata $session
+    $data = -join( xorEncDec $encryptedData $session | %{[char]$_}) 
 
-    $dataObject = ConvertFrom-Json $data
+
+    $dataObject =  $data | ConvertFrom-Json
 
     $ServiceSession = GenerateSession
 
     # encrypt sessison key with user pass
     $SessionKey = xorEncDec $ServiceSession $creds[$dataobject.Name]
-    $SQLTicket = xorEncDec $SessionKey $creds[$dataobject.Service]
+    $SQLTicket = xorEncDec $ServiceSession $creds[$dataobject.Service]
 
-    return $SQLTicket, $SessionKey
+    $dataToSend = @{
+        "Type" = "serviceresponse"
+        "data" = @{
+            "SQLTicket" = $SQLTicket
+            "SessionKey" = $SessionKey
+        }
+    } | ConvertTo-Json
+
+    return $dataToSend
 }
 
 
@@ -79,22 +88,22 @@ $data = UserAuthentication $message | ConvertTo-Json
 $tosend = [System.Text.Encoding]::UTF8.GetBytes($data)
 $stream.Write($tosend, 0, $tosend.Length)
 
+Write-Host "Sent Message To User "
 
-# Another 
+# Another Receive TGT
 $messageLenght = $stream.Read($storage, 0, $storage.Length)
 
 $data = [System.Text.Encoding]::UTF8.GetString($storage)
 $message = $data.substring(0, $messageLenght)  | ConvertFrom-Json
 
 
-
-IF ($message.Type -eq "userauth") {
-    $result = UserAuthentication $message.data
-    
+IF ($message.Type -eq "service") {
+    $result = ServiceAuthentication $message.data.usertgt $message.data.encryptedData
+    $tosend = [System.Text.Encoding]::UTF8.GetBytes($result)
+    $stream.Write($tosend, 0, $tosend.Length)
 }
 Else {
-    $result = ServiceAuthentication $message.data[0] $message.data[1] 
-    sendMessage $writer "svt" $result
+    Write-Host "no oooo"
 }
 
 $client.Close()
